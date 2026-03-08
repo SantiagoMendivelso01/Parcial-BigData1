@@ -101,8 +101,9 @@ jobs:
             
             python3 -m pip install -r requirements.txt --break-system-packages
             
-            pkill -f uvicorn || true
-            nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+            pkill -9 -f "app.main:app" || true
+            nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 < /dev/null &
+            disown
             
             echo "✅ Backend deployed"
             
