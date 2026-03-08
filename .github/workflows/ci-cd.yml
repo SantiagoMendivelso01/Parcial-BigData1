@@ -1,5 +1,4 @@
 name: CI/CD Pipeline - Chinook Music Store (Angular)
-
 on:
   push:
     branches: [main]
@@ -13,18 +12,14 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Run tests with coverage
         run: pytest app/tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=50
         env:
@@ -42,20 +37,16 @@ jobs:
     defaults:
       run:
         working-directory: ./frontend
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         run: npm install
-
       - name: Run Angular tests (headless Chrome)
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
@@ -64,21 +55,38 @@ jobs:
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Deploy Backend via SSH
+      - name: Setup & Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: 35.170.64.92
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/Parcial-Corte1
-            git pull origin main
-            cd backend
+            set -e
 
+            # ── Instalar dependencias del sistema si no existen ──
+            if ! command -v python3 &>/dev/null; then
+              sudo apt update && sudo apt install -y python3 python3-pip git
+            fi
+
+            if ! command -v pip3 &>/dev/null; then
+              sudo apt install -y python3-pip
+            fi
+
+            # ── Clonar repo si no existe, si existe hacer pull ──
+            if [ ! -d "$HOME/Parcial-Corte1/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git ~/Parcial-Corte1
+            else
+              cd ~/Parcial-Corte1 && git pull origin main
+            fi
+
+            # ── Instalar dependencias Python ──
+            cd ~/Parcial-Corte1/backend
+            pip3 install -r requirements.txt --break-system-packages
+
+            # ── Crear archivo .env ──
             cat > .env << EOF
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}
@@ -88,7 +96,28 @@ jobs:
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             EOF
 
-            pip install -r requirements.txt --break-system-packages
+            # ── Crear servicio systemd si no existe ──
+            if [ ! -f /etc/systemd/system/chinook-backend.service ]; then
+              sudo tee /etc/systemd/system/chinook-backend.service > /dev/null << 'SERVICE'
+            [Unit]
+            Description=Chinook Backend FastAPI
+            After=network.target
+
+            [Service]
+            User=ubuntu
+            WorkingDirectory=/home/ubuntu/Parcial-Corte1/backend
+            EnvironmentFile=/home/ubuntu/Parcial-Corte1/backend/.env
+            ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+            Restart=always
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+              sudo systemctl daemon-reload
+              sudo systemctl enable chinook-backend
+            fi
+
+            # ── Reiniciar servicio ──
             sudo systemctl restart chinook-backend
             echo "✅ Backend deployed"
 
@@ -97,7 +126,6 @@ jobs:
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
@@ -122,14 +150,29 @@ jobs:
           target: "/tmp/chinook-dist"
           strip_components: 3
 
-      - name: Activate build on EC2
+      - name: Setup & Activate Frontend on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: 3.235.229.64
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
+
+            # ── Instalar nginx si no existe ──
+            if ! command -v nginx &>/dev/null; then
+              sudo apt update && sudo apt install -y nginx
+              sudo systemctl enable nginx
+            fi
+
+            # ── Asegurar que /var/www/html existe ──
+            sudo mkdir -p /var/www/html
+
+            # ── Desplegar archivos ──
             sudo rm -rf /var/www/html/*
             sudo cp -r /tmp/chinook-dist/* /var/www/html/
+            sudo rm -rf /tmp/chinook-dist
+
+            # ── Reiniciar nginx ──
             sudo systemctl restart nginx
             echo "✅ Angular frontend deployed"
