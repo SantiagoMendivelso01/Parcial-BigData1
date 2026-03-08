@@ -1,11 +1,24 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
+from app.database import get_db
 from app.auth_utils import hash_password, verify_password, create_access_token
 from app.schemas import PurchaseRequest, PurchaseItem, UserRegister, TrackSearch
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def make_mock_db():
+    db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: db
+    return db
+
+def clear_overrides():
+    app.dependency_overrides.clear()
+
 client = TestClient(app)
+
+# ── Auth utils ────────────────────────────────────────────────────────────────
 
 def test_hash_and_verify_password():
     hashed = hash_password("secret123")
@@ -18,22 +31,26 @@ def test_create_access_token():
     assert isinstance(token, str)
     assert len(token) > 10
 
+# ── Auth endpoints ────────────────────────────────────────────────────────────
+
 def test_login_wrong_credentials_returns_401():
-    mock_db = MagicMock()
-    mock_db.query.return_value.filter.return_value.first.return_value = None
-    with patch("app.routers.auth.get_db", return_value=iter([mock_db])):
+    db = make_mock_db()
+    db.query.return_value.filter.return_value.first.return_value = None
+    try:
         response = client.post("/api/auth/login", json={
             "email": "noexiste@test.com",
             "password": "wrongpass"
         })
-    assert response.status_code == 401
+        assert response.status_code == 401
+    finally:
+        clear_overrides()
 
 def test_register_duplicate_email_returns_400():
+    db = make_mock_db()
     fake_user = MagicMock()
     fake_user.email = "existing@test.com"
-    mock_db = MagicMock()
-    mock_db.query.return_value.filter.return_value.first.return_value = fake_user
-    with patch("app.routers.auth.get_db", return_value=iter([mock_db])):
+    db.query.return_value.filter.return_value.first.return_value = fake_user
+    try:
         response = client.post("/api/auth/register", json={
             "email": "existing@test.com",
             "password": "pass1234",
@@ -47,24 +64,34 @@ def test_register_duplicate_email_returns_400():
             "postal_code": "110111",
             "phone": "3001234567"
         })
-    assert response.status_code == 400
+        assert response.status_code == 400
+    finally:
+        clear_overrides()
+
+# ── Tracks endpoints ──────────────────────────────────────────────────────────
 
 def test_search_tracks_returns_list():
-    mock_db = MagicMock()
-    mock_db.query.return_value.join.return_value.join.return_value.join.return_value\
+    db = make_mock_db()
+    db.query.return_value.join.return_value.join.return_value.join.return_value \
         .join.return_value.filter.return_value.limit.return_value.all.return_value = []
-    with patch("app.routers.tracks.get_db", return_value=iter([mock_db])):
+    try:
         response = client.get("/api/tracks/search?q=rock")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+    finally:
+        clear_overrides()
 
 def test_get_genres():
-    mock_db = MagicMock()
-    mock_db.query.return_value.order_by.return_value.all.return_value = []
-    with patch("app.routers.tracks.get_db", return_value=iter([mock_db])):
+    db = make_mock_db()
+    db.query.return_value.order_by.return_value.all.return_value = []
+    try:
         response = client.get("/api/tracks/genres")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+    finally:
+        clear_overrides()
+
+# ── Health & root ─────────────────────────────────────────────────────────────
 
 def test_health_check():
     response = client.get("/health")
@@ -74,6 +101,8 @@ def test_health_check():
 def test_root():
     response = client.get("/")
     assert response.status_code == 200
+
+# ── Schema validation ─────────────────────────────────────────────────────────
 
 def test_purchase_request_requires_items():
     with pytest.raises(Exception):
