@@ -68,16 +68,16 @@ jobs:
 
             # ── Instalar dependencias del sistema si no existen ──
             if ! command -v python3 &>/dev/null; then
-              sudo apt update && sudo apt install -y python3 python3-pip git
+              sudo apt update && sudo apt install -y python3 git curl
             fi
 
             if ! command -v pip3 &>/dev/null; then
-              sudo apt install -y python3-pip
+              curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3
             fi
 
             # ── Clonar repo si no existe, si existe hacer pull ──
             if [ ! -d "$HOME/Parcial-Corte1/.git" ]; then
-              git clone https://github.com/${{ github.repository }}.git ~/Parcial-Corte1
+              git clone https://github.com/SantiagoMendivelso01/Parcial-BigData1.git ~/Parcial-Corte1
             else
               cd ~/Parcial-Corte1 && git pull origin main
             fi
@@ -171,8 +171,31 @@ jobs:
             # ── Desplegar archivos ──
             sudo rm -rf /var/www/html/*
             sudo cp -r /tmp/chinook-dist/* /var/www/html/
+
+            # ── Corregir permisos (fix 403 Forbidden) ──
+            sudo chown -R www-data:www-data /var/www/html
+            sudo chmod -R 755 /var/www/html
+
+            # ── Limpiar tmp ──
             sudo rm -rf /tmp/chinook-dist
 
+            # ── Configurar nginx para Angular (fix rutas SPA) ──
+            sudo tee /etc/nginx/sites-available/default > /dev/null << 'NGINX'
+            server {
+                listen 80 default_server;
+                listen [::]:80 default_server;
+
+                root /var/www/html;
+                index index.html;
+
+                server_name _;
+
+                location / {
+                    try_files $uri $uri/ /index.html;
+                }
+            }
+            NGINX
+
             # ── Reiniciar nginx ──
-            sudo systemctl restart nginx
+            sudo nginx -t && sudo systemctl restart nginx
             echo "✅ Angular frontend deployed"
