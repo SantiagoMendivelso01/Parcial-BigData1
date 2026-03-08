@@ -98,12 +98,14 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             EOF
-
+            
             python3 -m pip install -r requirements.txt --break-system-packages
-
-            sudo systemctl restart chinook-backend || echo "Service not created yet"
+            
+            pkill -f uvicorn || true
+            nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+            
             echo "✅ Backend deployed"
-
+            
   deploy-frontend:
     name: Deploy Angular Frontend to EC2
     needs: [backend-tests, frontend-tests]
