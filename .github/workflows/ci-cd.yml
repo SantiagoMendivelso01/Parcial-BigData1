@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests with coverage
+      - name: Run tests
         run: pytest app/tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=50
         env:
           PYTHONPATH: .
@@ -37,7 +37,7 @@ jobs:
           SECRET_KEY: test-secret-key
 
   frontend-tests:
-    name: Frontend Tests (Angular Karma)
+    name: Frontend Tests (Angular)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,17 +46,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run Angular tests (headless Chrome)
+      - name: Run Angular tests
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
   deploy-backend:
@@ -77,7 +77,7 @@ jobs:
           script: |
 
             sudo apt update
-            sudo apt install -y python3-pip
+            sudo apt install -y python3-pip tmux
 
             if [ ! -d "$HOME/Parcial-Corte1" ]; then
               git clone https://github.com/${{ github.repository }} ~/Parcial-Corte1
@@ -99,10 +99,9 @@ jobs:
 
             python3 -m pip install -r requirements.txt --break-system-packages
 
-            pkill -9 -f "app.main:app" || true
+            tmux kill-session -t backend || true
 
-            nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 < /dev/null &
-            disown
+            tmux new -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
             echo "✅ Backend deployed"
 
@@ -115,12 +114,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Build Angular app
+      - name: Build Angular
         working-directory: ./frontend
         run: |
           npm install
@@ -136,7 +135,7 @@ jobs:
           target: "/tmp/chinook-dist"
           strip_components: 4
 
-      - name: Activate build on EC2
+      - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: 3.235.229.64
