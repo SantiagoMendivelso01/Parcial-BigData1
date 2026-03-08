@@ -76,19 +76,17 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
 
-            # instalar pip si no existe
             sudo apt update
             sudo apt install -y python3-pip
 
-            # clonar repo si no existe
             if [ ! -d "$HOME/Parcial-Corte1" ]; then
               git clone https://github.com/${{ github.repository }} ~/Parcial-Corte1
-            else
-              cd ~/Parcial-Corte1
-              git pull origin main
             fi
 
-            cd ~/Parcial-Corte1/backend
+            cd ~/Parcial-Corte1
+            git pull origin main
+
+            cd backend
 
             cat > .env << EOF
             DB_HOST=${{ secrets.DB_HOST }}
@@ -98,15 +96,16 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             EOF
-            
+
             python3 -m pip install -r requirements.txt --break-system-packages
-            
+
             pkill -9 -f "app.main:app" || true
+
             nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 < /dev/null &
             disown
-            
+
             echo "✅ Backend deployed"
-            
+
   deploy-frontend:
     name: Deploy Angular Frontend to EC2
     needs: [backend-tests, frontend-tests]
