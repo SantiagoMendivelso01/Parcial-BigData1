@@ -120,7 +120,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
           target: "/tmp/chinook-dist"
-          strip_components: 3
+          strip_components: 4   # ← ESTE ES EL ARREGLO
 
       - name: Activate build on EC2
         uses: appleboy/ssh-action@v1.0.0
