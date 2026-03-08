@@ -28,6 +28,7 @@ jobs:
       - name: Run tests with coverage
         run: pytest app/tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=50
         env:
+          PYTHONPATH: .
           DB_HOST: localhost
           DB_PORT: 3306
           DB_USER: test
