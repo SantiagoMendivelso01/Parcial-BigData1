@@ -71,7 +71,7 @@ jobs:
       - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 172.31.66.71
+          host: 100.53.203.205
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -128,7 +128,7 @@ jobs:
       - name: Copy build to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 172.31.67.153
+          host: 3.238.50.92 
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
