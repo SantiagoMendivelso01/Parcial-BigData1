@@ -1,103 +1,98 @@
 import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
+from fastapi.testclient import TestClient
 from app.main import app
-from app import models, schemas
 from app.auth_utils import hash_password, verify_password, create_access_token
+from app.schemas import PurchaseRequest, PurchaseItem, UserRegister, TrackSearch
 
 client = TestClient(app)
 
-
-# ── Auth utils tests ──────────────────────────────────
 def test_hash_and_verify_password():
-    hashed = hash_password("mypassword")
-    assert verify_password("mypassword", hashed) is True
-    assert verify_password("wrongpassword", hashed) is False
-
+    hashed = hash_password("secret123")
+    assert hashed != "secret123"
+    assert verify_password("secret123", hashed)
+    assert not verify_password("wrong", hashed)
 
 def test_create_access_token():
-    token = create_access_token({"sub": "1"})
-    assert token is not None
+    token = create_access_token({"sub": "user@test.com"})
     assert isinstance(token, str)
+    assert len(token) > 10
 
-
-# ── Auth endpoints ────────────────────────────────────
-def test_register_and_login(monkeypatch):
+def test_login_wrong_credentials_returns_401():
     mock_db = MagicMock()
     mock_db.query.return_value.filter.return_value.first.return_value = None
-
-    # Test login with wrong credentials returns 401
-    response = client.post("/api/auth/login", json={"email": "x@x.com", "password": "wrong"})
+    with patch("app.routers.auth.get_db", return_value=iter([mock_db])):
+        response = client.post("/api/auth/login", json={
+            "email": "noexiste@test.com",
+            "password": "wrongpass"
+        })
     assert response.status_code == 401
 
-
-# ── Track search endpoint ─────────────────────────────
-def test_search_tracks_returns_list(monkeypatch):
+def test_register_duplicate_email_returns_400():
+    fake_user = MagicMock()
+    fake_user.email = "existing@test.com"
     mock_db = MagicMock()
-    mock_db.query.return_value.join.return_value.join.return_value.join.return_value.filter.return_value.limit.return_value.all.return_value = []
+    mock_db.query.return_value.filter.return_value.first.return_value = fake_user
+    with patch("app.routers.auth.get_db", return_value=iter([mock_db])):
+        response = client.post("/api/auth/register", json={
+            "email": "existing@test.com",
+            "password": "pass1234",
+            "first_name": "Ana",
+            "last_name": "Lopez",
+            "company": "",
+            "address": "Calle 1",
+            "city": "Bogota",
+            "state": "",
+            "country": "Colombia",
+            "postal_code": "110111",
+            "phone": "3001234567"
+        })
+    assert response.status_code == 400
 
+def test_search_tracks_returns_list():
+    mock_db = MagicMock()
+    mock_db.query.return_value.join.return_value.join.return_value.join.return_value\
+        .join.return_value.filter.return_value.limit.return_value.all.return_value = []
     with patch("app.routers.tracks.get_db", return_value=iter([mock_db])):
         response = client.get("/api/tracks/search?q=rock")
-        # Should return 200 even with empty results
-        assert response.status_code in [200, 422]
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
-
-def test_get_genres(monkeypatch):
+def test_get_genres():
     mock_db = MagicMock()
-    mock_genre = MagicMock()
-    mock_genre.GenreId = 1
-    mock_genre.Name = "Rock"
-    mock_db.query.return_value.all.return_value = [mock_genre]
-
+    mock_db.query.return_value.order_by.return_value.all.return_value = []
     with patch("app.routers.tracks.get_db", return_value=iter([mock_db])):
         response = client.get("/api/tracks/genres")
-        assert response.status_code == 200
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
-
-# ── Health check ──────────────────────────────────────
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-
+    assert response.json()["status"] == "ok"
 
 def test_root():
     response = client.get("/")
     assert response.status_code == 200
 
-
-# ── Schema validation ─────────────────────────────────
 def test_purchase_request_requires_items():
     with pytest.raises(Exception):
-        schemas.PurchaseRequest(items=[], billing_address="", billing_city="", billing_country="")
-
+        PurchaseRequest(items=[], billing_address="x", billing_city="x", billing_country="x")
 
 def test_user_register_schema():
-    user = schemas.UserRegister(
-        email="test@test.com",
-        password="secret",
-        first_name="John",
-        last_name="Doe"
+    user = UserRegister(
+        email="test@test.com", password="pass1234",
+        first_name="Juan", last_name="Perez",
+        company="", address="Calle 1", city="Bogota",
+        state="", country="Colombia",
+        postal_code="110111", phone="3001234567"
     )
     assert user.email == "test@test.com"
-    assert user.first_name == "John"
-
 
 def test_track_search_schema():
-    track = schemas.TrackSearch(
-        TrackId=1,
-        Name="Bohemian Rhapsody",
-        Composer="Freddie Mercury",
-        UnitPrice=0.99,
-        Milliseconds=354000,
-        GenreName="Rock",
-        AlbumTitle="A Night at the Opera",
-        ArtistName="Queen",
-    )
-    assert track.TrackId == 1
-    assert track.UnitPrice == 0.99
-
+    ts = TrackSearch(q="rock", genre="Rock")
+    assert ts.q == "rock"
 
 def test_purchase_item_default_quantity():
-    item = schemas.PurchaseItem(track_id=5)
+    item = PurchaseItem(track_id=1)
     assert item.quantity == 1
