@@ -75,9 +75,15 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/Parcial-Corte1
-            git pull origin main
-            cd backend
+
+            if [ ! -d "$HOME/Parcial-Corte1" ]; then
+              git clone https://github.com/${{ github.repository }} ~/Parcial-Corte1
+            else
+              cd ~/Parcial-Corte1
+              git pull origin main
+            fi
+
+            cd ~/Parcial-Corte1/backend
 
             cat > .env << EOF
             DB_HOST=${{ secrets.DB_HOST }}
@@ -89,7 +95,8 @@ jobs:
             EOF
 
             pip install -r requirements.txt --break-system-packages
-            sudo systemctl restart chinook-backend
+
+            sudo systemctl restart chinook-backend || echo "Service not created yet"
             echo "✅ Backend deployed"
 
   deploy-frontend:
@@ -120,7 +127,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
           target: "/tmp/chinook-dist"
-          strip_components: 4   # ← ESTE ES EL ARREGLO
+          strip_components: 4
 
       - name: Activate build on EC2
         uses: appleboy/ssh-action@v1.0.0
