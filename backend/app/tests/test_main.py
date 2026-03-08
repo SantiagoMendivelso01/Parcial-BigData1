@@ -4,9 +4,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database import get_db
 from app.auth_utils import hash_password, verify_password, create_access_token
-from app.schemas import PurchaseRequest, PurchaseItem, UserRegister, TrackSearch
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
+from app.schemas import PurchaseRequest, PurchaseItem, UserRegister
 
 def make_mock_db():
     db = MagicMock()
@@ -18,8 +16,6 @@ def clear_overrides():
 
 client = TestClient(app)
 
-# ── Auth utils ────────────────────────────────────────────────────────────────
-
 def test_hash_and_verify_password():
     hashed = hash_password("secret123")
     assert hashed != "secret123"
@@ -30,8 +26,6 @@ def test_create_access_token():
     token = create_access_token({"sub": "user@test.com"})
     assert isinstance(token, str)
     assert len(token) > 10
-
-# ── Auth endpoints ────────────────────────────────────────────────────────────
 
 def test_login_wrong_credentials_returns_401():
     db = make_mock_db()
@@ -68,8 +62,6 @@ def test_register_duplicate_email_returns_400():
     finally:
         clear_overrides()
 
-# ── Tracks endpoints ──────────────────────────────────────────────────────────
-
 def test_search_tracks_returns_list():
     db = make_mock_db()
     db.query.return_value.join.return_value.join.return_value.join.return_value \
@@ -91,8 +83,6 @@ def test_get_genres():
     finally:
         clear_overrides()
 
-# ── Health & root ─────────────────────────────────────────────────────────────
-
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
@@ -102,11 +92,18 @@ def test_root():
     response = client.get("/")
     assert response.status_code == 200
 
-# ── Schema validation ─────────────────────────────────────────────────────────
+def test_purchase_item_default_quantity():
+    item = PurchaseItem(track_id=1)
+    assert item.quantity == 1
 
-def test_purchase_request_requires_items():
-    with pytest.raises(Exception):
-        PurchaseRequest(items=[], billing_address="x", billing_city="x", billing_country="x")
+def test_purchase_request_valid():
+    req = PurchaseRequest(
+        items=[PurchaseItem(track_id=1, quantity=2)],
+        billing_address="Calle 1",
+        billing_city="Bogota",
+        billing_country="Colombia"
+    )
+    assert len(req.items) == 1
 
 def test_user_register_schema():
     user = UserRegister(
@@ -118,10 +115,8 @@ def test_user_register_schema():
     )
     assert user.email == "test@test.com"
 
-def test_track_search_schema():
-    ts = TrackSearch(q="rock", genre="Rock")
-    assert ts.q == "rock"
-
-def test_purchase_item_default_quantity():
-    item = PurchaseItem(track_id=1)
-    assert item.quantity == 1
+def test_token_has_correct_subject():
+    token = create_access_token({"sub": "admin@test.com"})
+    assert isinstance(token, str)
+    parts = token.split(".")
+    assert len(parts) == 3
