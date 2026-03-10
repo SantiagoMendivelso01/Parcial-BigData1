@@ -11,7 +11,7 @@ import { ToastService } from '../../../core/services/toast.service';
   imports: [RouterLink, RouterLinkActive, CommonModule],
   template: `
     <nav class="navbar">
-      <a class="nav-brand" routerLink="/">🎵 CHINOooooooooooK</a>
+      <a class="nav-brand" routerLink="/">🎵 CHINOoK</a>
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Store</a>
         @if (auth.isLoggedIn()) {
