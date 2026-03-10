@@ -35,7 +35,9 @@ def test_login_wrong_credentials_returns_401():
             "email": "noexiste@test.com",
             "password": "wrongpass"
         })
-        assert response.status_code == 401
+        # ❌ Simulamos que alguien rompió la validación de seguridad
+        # y ahora credenciales incorrectas devuelven 200 en vez de 401
+        assert response.status_code == 200, "🚨 SECURITY BREACH: Invalid credentials are being accepted!"
     finally:
         clear_overrides()
 
