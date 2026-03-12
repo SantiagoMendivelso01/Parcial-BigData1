@@ -40,7 +40,7 @@ def register(data: schemas.UserRegister, db: Session = Depends(get_db)):
 def login(data: schemas.UserLogin, db: Session = Depends(get_db)):
     user = db.query(models.AppUser).filter(models.AppUser.email == data.email).first()
     if not user or not verify_password(data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=403, detail="Invalid email or password")
     token = create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer", "user": user}
 
