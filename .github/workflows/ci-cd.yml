@@ -134,6 +134,7 @@ jobs:
           source: "frontend/dist/chinook-frontend/browser/*"
           target: "/tmp/chinook-dist"
           strip_components: 4
+          #
 
       - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
