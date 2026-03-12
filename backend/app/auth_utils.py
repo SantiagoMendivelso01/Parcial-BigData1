@@ -20,10 +20,8 @@ bearer_scheme = HTTPBearer()
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
-
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()

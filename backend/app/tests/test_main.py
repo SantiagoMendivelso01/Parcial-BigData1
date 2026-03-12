@@ -6,6 +6,38 @@ from app.database import get_db
 from app.auth_utils import hash_password, verify_password, create_access_token
 from app.schemas import PurchaseRequest, PurchaseItem, UserRegister
 
+def test_purchase_total_is_calculated_correctly():
+    from app.auth_utils import get_current_user
+
+    db = make_mock_db()
+
+    fake_user = MagicMock()
+    fake_user.id = 1
+    fake_user.customer_id = 42
+
+    fake_track = MagicMock()
+    fake_track.TrackId = 1
+    fake_track.Name = "Bohemian Rhapsody"
+    fake_track.UnitPrice = 1.00
+
+    db.query.return_value.filter.return_value.first.return_value = fake_track
+    app.dependency_overrides[get_current_user] = lambda: fake_user
+
+    try:
+        response = client.post(
+            "/api/invoices/purchase",
+            json={
+                "items": [{"track_id": 1, "quantity": 3}],
+                "billing_address": "Calle 1",
+                "billing_city": "Bogota",
+                "billing_country": "Colombia"
+            }
+        )
+        assert response.status_code == 200
+        assert response.json()["Total"] == 3.00
+    finally:
+        clear_overrides()
+
 def make_mock_db():
     db = MagicMock()
     app.dependency_overrides[get_db] = lambda: db
