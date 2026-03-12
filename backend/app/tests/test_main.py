@@ -55,6 +55,8 @@ def test_purchase_total_is_calculated_correctly():
     finally:
         clear_overrides()
 
+#Prueba
+
 def make_mock_db():
     db = MagicMock()
     app.dependency_overrides[get_db] = lambda: db
