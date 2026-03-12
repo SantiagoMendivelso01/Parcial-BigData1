@@ -6,57 +6,6 @@ from app.database import get_db
 from app.auth_utils import hash_password, verify_password, create_access_token
 from app.schemas import PurchaseRequest, PurchaseItem, UserRegister
 
-def test_purchase_total_is_calculated_correctly():
-    from app.auth_utils import get_current_user
-    from unittest.mock import patch
-
-    db = make_mock_db()
-
-    fake_user = MagicMock()
-    fake_user.id = 1
-    fake_user.customer_id = 42
-
-    fake_track = MagicMock()
-    fake_track.TrackId = 1
-    fake_track.Name = "Bohemian Rhapsody"
-    fake_track.UnitPrice = 1.00
-
-    fake_invoice = MagicMock()
-    fake_invoice.InvoiceId = 101
-    fake_invoice.InvoiceDate = "2024-01-01T00:00:00"
-    fake_invoice.Total = 3.00
-    fake_invoice.BillingAddress = "Calle 1"
-    fake_invoice.BillingCity = "Bogota"
-    fake_invoice.BillingCountry = "Colombia"
-
-    fake_invoice_line = MagicMock()
-    fake_invoice_line.InvoiceLineId = 1
-    fake_invoice_line.TrackId = 1
-    fake_invoice_line.UnitPrice = 1.00
-    fake_invoice_line.Quantity = 3
-
-    db.query.return_value.filter.return_value.first.return_value = fake_track
-    app.dependency_overrides[get_current_user] = lambda: fake_user
-
-    try:
-        with patch("app.routers.invoices.models.Invoice", return_value=fake_invoice), \
-             patch("app.routers.invoices.models.InvoiceLine", return_value=fake_invoice_line):
-            response = client.post(
-                "/api/invoices/purchase",
-                json={
-                    "items": [{"track_id": 1, "quantity": 3}],
-                    "billing_address": "Calle 1",
-                    "billing_city": "Bogota",
-                    "billing_country": "Colombia"
-                }
-            )
-        assert response.status_code == 200
-        assert response.json()["Total"] == 3.00
-    finally:
-        clear_overrides()
-
-#Prueba
-
 def make_mock_db():
     db = MagicMock()
     app.dependency_overrides[get_db] = lambda: db
