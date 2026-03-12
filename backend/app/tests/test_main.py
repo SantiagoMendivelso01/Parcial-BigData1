@@ -20,8 +20,21 @@ def test_purchase_total_is_calculated_correctly():
     fake_track.Name = "Bohemian Rhapsody"
     fake_track.UnitPrice = 1.00
 
+    # Simular que después del flush() el InvoiceLine tiene un ID real
+    fake_invoice_line = MagicMock()
+    fake_invoice_line.InvoiceLineId = 1
+    fake_invoice_line.TrackId = 1
+    fake_invoice_line.UnitPrice = 1.00
+    fake_invoice_line.Quantity = 3
+
+    def mock_invoice_line(*args, **kwargs):
+        return fake_invoice_line
+
     db.query.return_value.filter.return_value.first.return_value = fake_track
     app.dependency_overrides[get_current_user] = lambda: fake_user
+
+    import app.models as models_module
+    models_module.InvoiceLine = mock_invoice_line
 
     try:
         response = client.post(
