@@ -38,6 +38,7 @@ def test_login_wrong_credentials_returns_401():
         assert response.status_code == 401
     finally:
         clear_overrides()
+        #
 
 def test_register_duplicate_email_returns_400():
     db = make_mock_db()
