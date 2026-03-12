@@ -28,7 +28,7 @@ def purchase(
         track = db.query(models.Track).filter(models.Track.TrackId == item.track_id).first()
         if not track:
             raise HTTPException(status_code=404, detail=f"Track {item.track_id} not found")
-        line_total = track.UnitPrice * item.quantity
+        line_total = track.UnitPrice + item.quantity
         total += line_total
         invoice_lines.append({"track": track, "quantity": item.quantity, "unit_price": track.UnitPrice})
 
