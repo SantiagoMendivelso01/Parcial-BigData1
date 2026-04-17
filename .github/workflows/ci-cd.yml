@@ -13,7 +13,6 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
-
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +41,6 @@ jobs:
     defaults:
       run:
         working-directory: ./frontend
-
     steps:
       - uses: actions/checkout@v4
 
@@ -60,24 +58,22 @@ jobs:
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
   deploy-backend:
-    name: Deploy Backends to EC2
+    name: Deploy Backend to EC2
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 34.239.131.205
+          host: ${{ secrets.EC2_BACKEND_HOST }}   # ✅ no hardcodear IPs
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-
-            sudo apt update
-            sudo apt install -y python3-pip tmux
+            sudo apt-get update -y
+            sudo apt-get install -y python3-pip tmux
 
             if [ ! -d "$HOME/Parcial-Corte1" ]; then
               git clone https://github.com/${{ github.repository }} ~/Parcial-Corte1
@@ -85,7 +81,6 @@ jobs:
 
             cd ~/Parcial-Corte1
             git pull origin main
-
             cd backend
 
             cat > .env << EOF
@@ -100,8 +95,7 @@ jobs:
             python3 -m pip install -r requirements.txt --break-system-packages
 
             tmux kill-session -t backend || true
-
-            tmux new -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+            tmux new-session -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"  # ✅ new-session en vez de new
 
             echo "✅ Backend deployed"
 
@@ -110,7 +104,6 @@ jobs:
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
@@ -128,22 +121,33 @@ jobs:
       - name: Copy build to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 35.174.11.196
+          host: ${{ secrets.EC2_FRONTEND_HOST }}  # ✅ no hardcodear IPs
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
           target: "/tmp/chinook-dist"
           strip_components: 4
-          #
 
       - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 35.174.11.196
+          host: ${{ secrets.EC2_FRONTEND_HOST }}  # ✅ no hardcodear IPs
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # ✅ Instalar nginx si no está
+            if ! command -v nginx &> /dev/null; then
+              sudo apt-get update -y
+              sudo apt-get install -y nginx
+            fi
+
+            # ✅ Crear directorio si no existe
+            sudo mkdir -p /var/www/html/
+
             sudo rm -rf /var/www/html/*
             sudo cp -r /tmp/chinook-dist/* /var/www/html/
+
+            sudo systemctl enable nginx
             sudo systemctl restart nginx
+
             echo "✅ Angular frontend deployed"
