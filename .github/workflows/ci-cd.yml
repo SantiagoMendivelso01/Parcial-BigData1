@@ -68,7 +68,7 @@ jobs:
       - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_BACKEND_HOST }}   # ✅ no hardcodear IPs
+          host: 34.239.131.205
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -95,7 +95,7 @@ jobs:
             python3 -m pip install -r requirements.txt --break-system-packages
 
             tmux kill-session -t backend || true
-            tmux new-session -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"  # ✅ new-session en vez de new
+            tmux new-session -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
             echo "✅ Backend deployed"
 
@@ -121,7 +121,7 @@ jobs:
       - name: Copy build to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_FRONTEND_HOST }}  # ✅ no hardcodear IPs
+          host: 35.174.11.196
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
@@ -131,19 +131,16 @@ jobs:
       - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_FRONTEND_HOST }}  # ✅ no hardcodear IPs
+          host: 35.174.11.196
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # ✅ Instalar nginx si no está
             if ! command -v nginx &> /dev/null; then
               sudo apt-get update -y
               sudo apt-get install -y nginx
             fi
 
-            # ✅ Crear directorio si no existe
             sudo mkdir -p /var/www/html/
-
             sudo rm -rf /var/www/html/*
             sudo cp -r /tmp/chinook-dist/* /var/www/html/
 
