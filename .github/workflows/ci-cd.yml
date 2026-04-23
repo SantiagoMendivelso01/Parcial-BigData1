@@ -155,7 +155,7 @@ jobs:
 
             echo "✅ Angular frontend deployed"
 
-deploy-etl-dim-date:
+  deploy-etl-dim-date:
     name: ETL Dim Date to AWS S3
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
