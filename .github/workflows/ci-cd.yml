@@ -155,7 +155,7 @@ jobs:
 
             echo "✅ Angular frontend deployed"
 
-  deploy-etl-dim-date:
+deploy-etl-dim-date:
     name: ETL Dim Date to AWS S3
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
@@ -176,10 +176,13 @@ jobs:
         env:
           PYTHONPATH: .
 
-      - name: Run ETL dim_date
-        run: python etl/etl_dim_date.py
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Upload ETL script to S3
+        run: aws s3 cp etl/etl_dim_date.py s3://chinook-sm-pbd2/glue-scripts/etl_dim_date.py
