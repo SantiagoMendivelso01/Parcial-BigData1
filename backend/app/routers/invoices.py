@@ -5,9 +5,36 @@ from datetime import datetime
 from app.database import get_db
 from app import models, schemas
 from app.auth_utils import get_current_user
+import boto3
+import os
 
+#Error
 router = APIRouter()
 
+def trigger_glue_jobs():
+    """Dispara todos los Glue Jobs del DW después de una compra"""
+    try:
+        glue = boto3.client(
+            'glue',
+            region_name='us-east-1',
+            aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+            aws_session_token=os.environ.get('AWS_SESSION_TOKEN')
+        )
+        
+        jobs = [
+            'Dim_Etl',
+            'fact_sales',
+            'dim_customer_history',
+            'dim_date'
+        ]
+        
+        for job_name in jobs:
+            glue.start_job_run(JobName=job_name)
+            print(f"✅ Job {job_name} disparado")
+            
+    except Exception as e:
+        print(f"⚠️ Error disparando Glue Jobs: {e}")
 
 @router.post("/purchase", response_model=schemas.InvoiceOut)
 def purchase(
@@ -17,13 +44,10 @@ def purchase(
 ):
     if not current_user.customer_id:
         raise HTTPException(status_code=400, detail="No customer profile linked to your account")
-
     if not data.items:
         raise HTTPException(status_code=400, detail="No items in purchase")
-
     total = 0.0
     invoice_lines = []
-
     for item in data.items:
         track = db.query(models.Track).filter(models.Track.TrackId == item.track_id).first()
         if not track:
@@ -31,7 +55,6 @@ def purchase(
         line_total = track.UnitPrice * item.quantity
         total += line_total
         invoice_lines.append({"track": track, "quantity": item.quantity, "unit_price": track.UnitPrice})
-
     invoice = models.Invoice(
         CustomerId=current_user.customer_id,
         InvoiceDate=datetime.utcnow(),
@@ -42,7 +65,6 @@ def purchase(
     )
     db.add(invoice)
     db.flush()
-
     lines_out = []
     for line in invoice_lines:
         il = models.InvoiceLine(
@@ -60,8 +82,10 @@ def purchase(
             Quantity=il.Quantity,
             track_name=line["track"].Name,
         ))
-
     db.commit()
+
+    # Disparar todos los ETLs después de la compra
+    trigger_glue_jobs()
 
     return schemas.InvoiceOut(
         InvoiceId=invoice.InvoiceId,
@@ -72,7 +96,6 @@ def purchase(
         BillingCountry=invoice.BillingCountry,
         items=lines_out,
     )
-
 
 @router.get("/my", response_model=List[schemas.InvoiceOut])
 def my_invoices(
