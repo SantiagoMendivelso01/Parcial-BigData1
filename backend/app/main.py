@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, tracks, invoices
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Chinook Music Store API", version="1.0.0")
 
