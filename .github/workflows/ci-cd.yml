@@ -90,6 +90,9 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             EOF
 
             python3 -m pip install -r requirements.txt --break-system-packages
@@ -148,7 +151,7 @@ jobs:
             sudo systemctl restart nginx
 
             echo "✅ Angular frontend deployed"
-  
+
   deploy-etl-dim-date:
     name: ETL Dim Date to AWS S3
     needs: [backend-tests, frontend-tests]
