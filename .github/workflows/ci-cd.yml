@@ -68,7 +68,7 @@ jobs:
       - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 54.81.43.95 #IP BACKEND
+          host: 75.101.201.193 #IP BACKEND
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -127,7 +127,7 @@ jobs:
       - name: Copy build to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 54.84.78.217 #IP FRONT END
+          host: 13.217.43.210 #IP FRONT END
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
@@ -137,7 +137,7 @@ jobs:
       - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 54.84.78.217 #IP FRONT END
+          host: 13.217.43.210 #IP FRONT END
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
