@@ -23,7 +23,7 @@ def trigger_glue_jobs():
         )
         
         jobs = [
-            'Dim_Etl',
+            'Dim_ETL',
             'fact_sales',
             'dim_customer_history',
             'dim_date'
