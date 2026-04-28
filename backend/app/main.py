@@ -9,7 +9,7 @@ app = FastAPI(title="Chinook Music Store API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change to your frontend EC2 IP in production
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
