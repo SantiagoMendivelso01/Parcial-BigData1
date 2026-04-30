@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(title="Chinook Music Store API", version="1.0.0")
-
+#
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Change to your frontend EC2 IP in production
