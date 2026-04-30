@@ -5,36 +5,10 @@ from datetime import datetime
 from app.database import get_db
 from app import models, schemas
 from app.auth_utils import get_current_user
-import boto3
-import os
 
 #Error
 router = APIRouter()
 
-def trigger_glue_jobs():
-    """Dispara todos los Glue Jobs del DW después de una compra"""
-    try:
-        glue = boto3.client(
-            'glue',
-            region_name='us-east-1',
-            aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-            aws_session_token=os.environ.get('AWS_SESSION_TOKEN')
-        )
-        
-        jobs = [
-            'Dim_ETL',
-            'fact_sales',
-            'dim_customer_history',
-            'dim_date'
-        ]
-        
-        for job_name in jobs:
-            glue.start_job_run(JobName=job_name)
-            print(f"✅ Job {job_name} disparado")
-            
-    except Exception as e:
-        print(f"⚠️ Error disparando Glue Jobs: {e}")
 
 @router.post("/purchase", response_model=schemas.InvoiceOut)
 def purchase(
@@ -84,8 +58,6 @@ def purchase(
         ))
     db.commit()
 
-    # Disparar todos los ETLs después de la compra
-    trigger_glue_jobs()
 
     return schemas.InvoiceOut(
         InvoiceId=invoice.InvoiceId,
