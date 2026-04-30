@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -19,8 +19,8 @@ class UserOut(BaseModel):
     email: str
     role: str
     customer_id: Optional[int]
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
@@ -32,14 +32,14 @@ class Token(BaseModel):
 class GenreOut(BaseModel):
     GenreId: int
     Name: str
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class ArtistOut(BaseModel):
     ArtistId: int
     Name: str
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class TrackOut(BaseModel):
     TrackId: int
@@ -49,8 +49,8 @@ class TrackOut(BaseModel):
     Milliseconds: int
     genre: Optional[GenreOut]
     album: Optional[dict]
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class TrackSearch(BaseModel):
     TrackId: int
@@ -89,5 +89,5 @@ class InvoiceOut(BaseModel):
     BillingCity: str
     BillingCountry: str
     items: List[InvoiceLineOut] = []
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
