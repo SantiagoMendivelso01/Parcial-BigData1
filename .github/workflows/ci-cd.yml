@@ -68,7 +68,7 @@ jobs:
       - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 3.92.178.80 #IP BACKEND
+          host: 35.153.203.60 #IP BACKEND
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -82,10 +82,10 @@ jobs:
             cd ~/Parcial-Corte1
             git pull origin main
             cd backend
-            
+
             python3 -m pip install -r requirements.txt --break-system-packages
             pip install python-dotenv --break-system-packages
-            
+
             cat > .env << EOF
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}
@@ -127,7 +127,7 @@ jobs:
       - name: Copy build to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 3.87.40.53 #IP FRONT END
+          host: 35.175.215.212 #IP FRONT END
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "frontend/dist/chinook-frontend/browser/*"
@@ -137,7 +137,7 @@ jobs:
       - name: Activate build
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 3.87.40.53 #IP FRONT END
+          host: 35.175.215.212 #IP FRONT END
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
