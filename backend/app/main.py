@@ -14,7 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+#AQWR
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(tracks.router, prefix="/api/tracks", tags=["tracks"])
 app.include_router(invoices.router, prefix="/api/invoices", tags=["invoices"])
