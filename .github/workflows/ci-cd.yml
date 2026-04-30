@@ -73,7 +73,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo apt-get update -y
-            sudo apt-get install -y python3-pip tmux
+            sudo apt-get install -y python3-pip python3-venv tmux build-essential python3-dev rustc cargo
 
             if [ ! -d "$HOME/Parcial-Corte1" ]; then
               git clone https://github.com/${{ github.repository }} ~/Parcial-Corte1
@@ -83,8 +83,13 @@ jobs:
             git pull origin main
             cd backend
 
-            python3 -m pip install -r requirements.txt --break-system-packages
-            pip install python-dotenv --break-system-packages
+            # Create and use a virtual environment
+            python3 -m venv venv
+            source venv/bin/activate
+            
+            # Upgrade pip and install requirements
+            pip install --upgrade pip setuptools wheel
+            pip install -r requirements.txt
 
             cat > .env << EOF
             DB_HOST=${{ secrets.DB_HOST }}
@@ -98,12 +103,11 @@ jobs:
             AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             EOF
 
-            python3 -m pip install -r requirements.txt --break-system-packages
-
+            # Restart backend session
             tmux kill-session -t backend || true
-            tmux new-session -d -s backend "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+            tmux new-session -d -s backend "source venv/bin/activate && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
-            echo "✅ Backend deployed"
+            echo "✅ Backend deployed successfully with virtualenv"
 
   deploy-frontend:
     name: Deploy Angular Frontend to EC2
